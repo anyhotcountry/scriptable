@@ -1,0 +1,28 @@
+{
+  "name": "scriptable",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "copy": "copy .\\src\\* ..\\..\\..\\iCloudDrive\\iCloud~dk~simonbs~Scriptable\\"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anyhotcountry/scriptable.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/anyhotcountry/scriptable/issues"
+  },
+  "homepage": "https://github.com/anyhotcountry/scriptable#readme",
+  "eslintConfig": {
+    "extends": "@scriptable-ios"
+  },
+  "devDependencies": {
+    "@scriptable-ios/eslint-config": "^1.4.0",
+    "@types/scriptable-ios": "^1.4.0",
+    "eslint": "latest"
+  }
+}
