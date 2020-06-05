@@ -1,20 +1,26 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
-// icon-color: deep-blue; icon-glyph: credit-card;
+// always-run-in-app: true; icon-color: deep-blue;
+// icon-glyph: credit-card;
 const ocr = importModule('ocr');
-const store = {
-  data: [],
+const settings = {
   transactionsFile: 'transactions.json',
   startDay: 27,
-  bigShops: ['TESCO', 'ALDI', 'ASDA', 'WAITROSE']
+  groceryShops: ['TESCO', 'ALDI', 'ASDA', 'WAITROSE']
 };
-const table = new UITable();
-const rows = [];
+
 const fm = FileManager.iCloud();
-const dataFolder = fm.bookmarkedPath('tesco-cc');
-const transactionsPath = fm.joinPath(dataFolder, store.transactionsFile);
-const dateFormatter = new DateFormatter();
-dateFormatter.dateFormat = 'E d MMM';
+const state = {
+  data: [],
+  table: new UITable(),
+  rows: [],
+  fm,
+  dataFolder: fm.bookmarkedPath('tesco-cc'),
+  transactionsPath: fm.joinPath(fm.bookmarkedPath('tesco-cc'), settings.transactionsFile),
+  dateFormatter: new DateFormatter()
+};
+
+state.dateFormatter.dateFormat = 'E d MMM';
 
 // Group the transactions into weeks, with week1 the starting point
 const groupByWeek = (xs, week1) => {
@@ -27,65 +33,65 @@ const groupByWeek = (xs, week1) => {
   }, []);
 };
 
+const amountDialog = async (value, action) => {
+  const alert = new Alert();
+  alert.title = 'Amount?';
+  alert.addTextField('', value.toFixed(2));
+  alert.addAction(action);
+  await alert.presentAlert();
+  return parseFloat(alert.textFieldValue(0));
+}
+
 // Transaction menu option
-const fillWeeks = async (number) => {
-  const endDate = new Date(store.data[0].date);
-  endDate.setDate(store.startDay - 1);
+const fillAction = async (number) => {
+  const { rows: { [number]: obj }, data, fm, transactionsPath } = state;
+  const endDate = new Date(data[0].date);
+  endDate.setDate(settings.startDay - 1);
   endDate.setMonth(endDate.getMonth() + 1);
-  const { date } = rows[number];
-  let { value, description } = rows[number];
+  let { date, value, description } = obj;
   description = '🔸' + description;
   const startDate = new Date(date);
   startDate.setDate(date.getDate() + 7);
-  try {
-    const alert = new Alert();
-    alert.title = 'Amount?';
-    alert.addTextField('', value.toFixed(2));
-    alert.addAction('Fill');
-    await alert.presentAlert();
-    value = parseFloat(alert.textFieldValue(0));
-  } catch (error) {
-    console.log(error);
-  }
+  value = await amountDialog(value, 'Fill');
 
   for (let d = startDate; d.getTime() <= endDate.getTime(); d.setDate(d.getDate() + 7)) {
-    store.data.push({ date: new Date(d), description, value, actual: false });
+    data.push({ date: new Date(d), description, value, actual: false });
   }
-  table.removeAllRows();
-  rows.length = 0;
-  buildTable(store.data);
-  table.reload();
-  fm.writeString(transactionsPath, JSON.stringify(store.data));
+  buildTable(data);
+  fm.writeString(transactionsPath, JSON.stringify(data));
+}
+
+const editAction = async (number) => {
+  const { rows: { [number]: obj }, data, fm, transactionsPath } = state;
+  obj.value = await amountDialog(obj.value, 'Set');
+  buildTable(data);
+  fm.writeString(transactionsPath, JSON.stringify(data));
 }
 
 // Transaction menu option
-const  deleteRow = (number) => {
-  const obj = rows[number];
-  const index = store.data.indexOf(obj);
-  store.data.splice(index, 1);
-  table.removeAllRows();
-  rows.length = 0;
-  buildTable(store.data);
-  table.reload();
-  fm.writeString(transactionsPath, JSON.stringify(store.data));
+const deleteAction = (number) => {
+  const { rows: { [number]: obj }, data, fm, transactionsPath } = state;
+  const index = data.indexOf(obj);
+  data.splice(index, 1);
+  buildTable(data);
+  fm.writeString(transactionsPath, JSON.stringify(data));
 }
 
 // Show menu when clicking on a row in the table
-const showAlert = async (number) => {
+const showRowMenu = async (number) => {
+  const { rows: { [number]: { actual } } } = state;
+  const action = actual ? (number) => fillAction(number) : (number) => editAction(number);
   const alert = new Alert();
-  //alert.title = 'Hello';
-  //alert.message = 'What do you want to do?';
-  alert.addAction('Fill Weeks');
+  alert.addAction(actual ? 'Fill Weeks' : 'Edit');
   alert.addDestructiveAction('Delete');
   alert.addCancelAction('Cancel');
-
   const option = await alert.presentAlert();
   switch (option) {
     case 0:
-      fillWeeks(number);
+      action(number);
       break;
     case 1:
-      deleteRow(number);
+      deleteAction(number);
       break;
     default:
       break;
@@ -94,6 +100,7 @@ const showAlert = async (number) => {
 
 // Generic function to build a table row
 const buildRow = (c1, c2 = '', c3 = '', obj = {}) => {
+  const { rows } = state;
   const row = new UITableRow();
   const descCell = row.addText(c1, c2);
   descCell.subtitleColor = Color.blue();
@@ -110,17 +117,15 @@ const buildRow = (c1, c2 = '', c3 = '', obj = {}) => {
 
 // A function to build a section in the table for a week or for other category
 const buildSection = (headerText, data) => {
+  const { table } = state;
   let total = 0;
   const header = buildRow(headerText);
   header.isHeader = true;
-  const button = header.addButton('➡️');
-  button.rightAligned();
-  button.widthWeight = 25;
   table.addRow(header);
   data.forEach((r, i) => {
-    const row = buildRow('  ' + r.description, '  ' + dateFormatter.string(r.date), '£' + r.value.toFixed(2), r);
+    const row = buildRow('  ' + r.description, '  ' + state.dateFormatter.string(r.date), '£' + r.value.toFixed(2), r);
     table.addRow(row);
-    row.onSelect = showAlert;
+    row.onSelect = showRowMenu;
     total += r.value;
   });
   const footer = buildRow('  Total', '', '£' + total.toFixed(2));
@@ -131,13 +136,28 @@ const buildSection = (headerText, data) => {
 
 // Build the transactions table
 const buildTable = (data) => {
-  store.data.sort((a, b) => a.date.getTime() - b.date.getTime());
-  const periodStartDate = new Date(store.data[0].date);
-  periodStartDate.setDate(store.startDay);
-  const regularWeekly = data.filter((d) => store.bigShops.some((s) => d.description.includes(s)));
-  const other = data.filter((d) => !store.bigShops.some((s) => d.description.includes(s)));
+  const { table, rows, fm, transactionsPath } = state;
+  table.removeAllRows();
+  rows.length = 0;
+  data.sort((a, b) => a.date.getTime() - b.date.getTime());
+  const periodStartDate = new Date(data[0].date);
+  periodStartDate.setDate(settings.startDay);
+  const regularWeekly = data.filter((d) => settings.groceryShops.some((s) => d.description.includes(s)));
+  const other = data.filter((d) => !settings.groceryShops.some((s) => d.description.includes(s)));
   const groupedWeekly = groupByWeek(regularWeekly, periodStartDate);
   table.showSeparators = true;
+  const menu = new UITableRow();
+  menu.isHeader = true;
+  const button = menu.addButton('Reset');
+  button.rightAligned();
+  button.onTap = () => {
+    state.data = data.filter((r) => r.actual);
+    buildTable(state.data);
+    fm.writeString(transactionsPath, JSON.stringify(state.data));
+  }
+  table.addRow(menu);
+  rows.push({});
+
   const header = buildRow('Transaction', '', 'Amount');
   header.isHeader = true;
   table.addRow(header);
@@ -150,28 +170,34 @@ const buildTable = (data) => {
   const footer = buildRow('Total', '', '£' + total.toFixed(2));
   footer.isHeader = true;
   table.addRow(footer);
+  table.reload();
 }
 
 // Read transactions from file if exists
-if (fm.fileExists(transactionsPath)) {
-  fm.downloadFileFromiCloud(transactionsPath);
-  const json = fm.readString(transactionsPath);
+if (state.fm.fileExists(state.transactionsPath)) {
+  state.fm.downloadFileFromiCloud(state.transactionsPath);
+  const json = state.fm.readString(state.transactionsPath);
   const data = JSON.parse(json, (key, value) => key === 'date' ? new Date(value) : value);
-  store.data = data;
+  state.data = data;
 }
 
 // Perform OCR on screenshots
-const files = fm.listContents(dataFolder).filter((f) => f.endsWith('.png')).map((f) => fm.joinPath(dataFolder, f));
-for (let file of files) {
-  await fm.downloadFileFromiCloud(file);
-  const imageData = await fm.read(file);
-  const fileData = await ocr(imageData);
-  store.data = [...store.data, ...fileData];
-  fm.remove(file);
+const files = state.fm.listContents(state.dataFolder).filter((f) => f.endsWith('.png')).map((f) => state.fm.joinPath(state.dataFolder, f));
+if (files.length > 0) {
+  for (let file of files) {
+    await state.fm.downloadFileFromiCloud(file);
+    const imageData = await state.fm.read(file);
+    const fileData = await ocr(imageData);
+    state.data = [...state.data, ...fileData];
+    state.fm.remove(file);
+  }
+  // Find unique values
+  const map = new Map(state.data.map((x) => [JSON.stringify(x), x]));
+  state.data = [...map.values()];
 }
 
-fm.writeString(transactionsPath, JSON.stringify(store.data));
-buildTable(store.data);
+state.fm.writeString(state.transactionsPath, JSON.stringify(state.data));
+buildTable(state.data);
 
-await table.present(true);
+await state.table.present(true);
 Script.complete();
