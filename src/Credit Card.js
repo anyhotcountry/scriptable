@@ -3,6 +3,8 @@
 // always-run-in-app: true; icon-color: deep-blue;
 // icon-glyph: credit-card;
 const ocr = importModule('ocr');
+const clearbitlookup = importModule('clearbit');
+const MS_PER_DAY = 86400000;
 const settings = {
   transactionsFile: 'transactions.json',
   startDay: 27,
@@ -25,7 +27,7 @@ state.dateFormatter.dateFormat = 'E d MMM';
 // Group the transactions into weeks, with week1 the starting point
 const groupByWeek = (xs, week1) => {
   return xs.reduce((rv, x) => {
-    let v = Math.max(1, 1 + Math.floor((x.date.getTime() - week1.getTime()) / (86400000 * 7)));
+    let v = Math.max(1, 1 + Math.floor((x.date.getTime() - week1.getTime()) / (MS_PER_DAY * 7)));
     let el = rv.find((r) => r && r.key === v);
     if (el) { el.values.push(x); }
     else { rv.push({ key: v, values: [x] }); }
@@ -102,6 +104,13 @@ const showRowMenu = async (number) => {
 const buildRow = (c1, c2 = '', c3 = '', obj = {}) => {
   const { rows } = state;
   const row = new UITableRow();
+  if (c2 !== '') {
+    try {
+      const logo = row.addImageAtURL(clearbitlookup(c1));
+      logo.widthWeight = 10;        
+    } catch (error) {
+    }
+  }
   const descCell = row.addText(c1, c2);
   descCell.subtitleColor = Color.blue();
   descCell.widthWeight = 75;
@@ -134,6 +143,12 @@ const buildSection = (headerText, data) => {
   return total;
 }
 
+const daysBetween = (fromDate, toDate) => {
+  const ms = toDate.getTime() - fromDate.getTime();
+  days = Math.floor(ms / MS_PER_DAY);
+  return days;
+};
+
 // Build the transactions table
 const buildTable = (data) => {
   const { table, rows, fm, transactionsPath } = state;
@@ -148,13 +163,6 @@ const buildTable = (data) => {
   table.showSeparators = true;
   const menu = new UITableRow();
   menu.isHeader = true;
-  const button = menu.addButton('Reset');
-  button.rightAligned();
-  button.onTap = () => {
-    state.data = data.filter((r) => r.actual);
-    buildTable(state.data);
-    fm.writeString(transactionsPath, JSON.stringify(state.data));
-  }
   table.addRow(menu);
   rows.push({});
 
@@ -170,6 +178,22 @@ const buildTable = (data) => {
   const footer = buildRow('Total', '', '£' + total.toFixed(2));
   footer.isHeader = true;
   table.addRow(footer);
+  const isForecast = state.data.some((r) => !r.actual);
+  const endDate = new Date(data[0].date);
+  endDate.setDate(settings.startDay - 1);
+  endDate.setMonth(endDate.getMonth() + 1);
+  const now = new Date();
+  const summary = menu.addText(isForecast ? `Forecast £${total.toFixed(2)}` : `Spent to date £${total.toFixed(2)}`, 
+    `${state.dateFormatter.string(now)} - ${daysBetween(now, endDate)} days left`);
+  summary.widthWeight = 80;
+  const button = menu.addButton('Reset');
+  button.rightAligned();
+  button.widthWeight = 20;
+  button.onTap = () => {
+    state.data = data.filter((r) => r.actual);
+    buildTable(state.data);
+    fm.writeString(transactionsPath, JSON.stringify(state.data));
+  }
   table.reload();
 }
 
@@ -197,7 +221,14 @@ if (files.length > 0) {
 }
 
 state.fm.writeString(state.transactionsPath, JSON.stringify(state.data));
-buildTable(state.data);
+if (state.data.length > 0) {
+  buildTable(state.data);
+  await state.table.present(true);
+} else {
+  const alert = new Alert();
+  alert.title = 'No Data!';
+  alert.message = `Please copy screenshots to tesco-cc iCloud folder.`;
+  await alert.presentAlert();
+}
 
-await state.table.present(true);
 Script.complete();
