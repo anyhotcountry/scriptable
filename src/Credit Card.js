@@ -3,6 +3,7 @@
 // always-run-in-app: true; icon-color: deep-blue;
 // icon-glyph: credit-card;
 const ocr = importModule('ocr');
+const bingsearch = importModule('bingsearch');
 const clearbitlookup = importModule('clearbit');
 const MS_PER_DAY = 86400000;
 const settings = {
@@ -50,14 +51,14 @@ const fillAction = async (number) => {
   const endDate = new Date(data[0].date);
   endDate.setDate(settings.startDay - 1);
   endDate.setMonth(endDate.getMonth() + 1);
-  let { date, value, description } = obj;
+  let { date, value, description, hostname } = obj;
   description = '🔸' + description;
   const startDate = new Date(date);
   startDate.setDate(date.getDate() + 7);
   value = await amountDialog(value, 'Fill');
 
   for (let d = startDate; d.getTime() <= endDate.getTime(); d.setDate(d.getDate() + 7)) {
-    data.push({ date: new Date(d), description, value, actual: false });
+    data.push({ date: new Date(d), description, value, actual: false, hostname });
   }
   buildTable(data);
   fm.writeString(transactionsPath, JSON.stringify(data));
@@ -101,12 +102,12 @@ const showRowMenu = async (number) => {
 };
 
 // Generic function to build a table row
-const buildRow = (c1, c2 = '', c3 = '', obj = {}) => {
+const buildRow = (c1, c2 = '', c3 = '', obj = {}, hostname = '') => {
   const { rows } = state;
   const row = new UITableRow();
-  if (c2 !== '') {
+  if (hostname !== '') {
     try {
-      const logo = row.addImageAtURL(clearbitlookup(c1));
+      const logo = row.addImageAtURL(clearbitlookup(hostname));
       logo.widthWeight = 10;        
     } catch (error) {
     }
@@ -132,12 +133,12 @@ const buildSection = (headerText, data) => {
   header.isHeader = true;
   table.addRow(header);
   data.forEach((r, i) => {
-    const row = buildRow('  ' + r.description, '  ' + state.dateFormatter.string(r.date), '£' + r.value.toFixed(2), r);
+    const row = buildRow(r.description, '  ' + state.dateFormatter.string(r.date), '£' + r.value.toFixed(2), r, r.hostname);
     table.addRow(row);
     row.onSelect = showRowMenu;
     total += r.value;
   });
-  const footer = buildRow('  Total', '', '£' + total.toFixed(2));
+  const footer = buildRow(`  ${headerText} Total`, '', '£' + total.toFixed(2));
   footer.isHeader = true;
   table.addRow(footer);
   return total;
@@ -166,9 +167,6 @@ const buildTable = (data) => {
   table.addRow(menu);
   rows.push({});
 
-  const header = buildRow('Transaction', '', 'Amount');
-  header.isHeader = true;
-  table.addRow(header);
   let total = 0;
   groupedWeekly.forEach((w) => {
     total += buildSection(`Week ${w.key}`, w.values);
@@ -212,6 +210,9 @@ if (files.length > 0) {
     await state.fm.downloadFileFromiCloud(file);
     const imageData = await state.fm.read(file);
     const fileData = await ocr(imageData);
+    for (const line of fileData) {
+      line.hostname = await bingsearch.getHostname(line.description);
+    }
     state.data = [...state.data, ...fileData];
     state.fm.remove(file);
   }
