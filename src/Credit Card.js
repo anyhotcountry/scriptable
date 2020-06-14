@@ -2,9 +2,9 @@
 // These must be at the very top of the file. Do not edit.
 // always-run-in-app: true; icon-color: deep-blue;
 // icon-glyph: credit-card;
-const ocr = importModule('ocr');
-const bingsearch = importModule('bingsearch');
-const clearbitlookup = importModule('clearbit');
+const ocr = importModule('lib/ocr');
+const bingsearch = importModule('lib/bingsearch');
+const clearbitlookup = importModule('lib/clearbit');
 const MS_PER_DAY = 86400000;
 const settings = {
   transactionsFile: 'transactions.json',
