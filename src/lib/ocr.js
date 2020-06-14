@@ -1,34 +1,69 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
-// icon-color: orange; icon-glyph: magic;
+// always-run-in-app: true; icon-color: light-gray;
+// icon-glyph: plug;
 const accountName = Keychain.get('ocr-account');
 const accountKey = Keychain.get('ocr-key');
-const url = `https://${accountName}.cognitiveservices.azure.com/vision/v3.0/ocr?language=en&detectOrientation=true`;
+const url = `https://${accountName}.cognitiveservices.azure.com/vision/v3.0/read/analyze`;
 
-const cleanNumber = (text) => {
-  return text.replaceAll('E', '').replaceAll('l', '1').replaceAll('O', '0').replaceAll('I', '1').replaceAll(',', '');
+const waitForNextCall = () => {
+  return new Promise((resolve) => Timer.schedule(400, false, resolve));
 };
 
-// Perform OCR on an image and return the data in the expected format
-module.exports = async (imageData) => {
-  const data = [];
+const toTransaction = (description, rawValue, rawDate) => {
+  const value = parseFloat(rawValue.replace(/[^0-9.-]+/g, ''));
+  return { description, value, date: new Date(rawDate), actual: true };
+};
+
+const ocr = async (imageData) => {
   const request = new Request(url);
   request.headers = {
     'Content-Type': 'application/octet-stream',
-    'Ocp-Apim-Subscription-Key': accountKey
+    'Ocp-Apim-Subscription-Key': accountKey,
   };
   request.method = 'POST';
-  request.addFileDataToMultipart(imageData, "image/png", "image", "image.png");
-  const res = await request.loadJSON();
-  const values = res.regions[1].lines;
-  const desc = res.regions[0].lines;
-  for (let i = 0; i < values.length; i++) {
-    const description = desc[i * 2].words.map((w) => w.text).join(' ');
-    const date = desc[i * 2 + 1].words.map((w) => w.text);
-    date[1] = cleanNumber(date[1]);
-    const val = cleanNumber(values[i].words[0].text);
-    const value = parseFloat(val);
-    data.push({ date: new Date(date.join(' ')), description, value, actual: true });
+  request.body = imageData;
+  await request.load();
+  const response = request.response;
+  const resultUrl = response.headers['Operation-Location'];
+  var resRequest = new Request(resultUrl);
+  resRequest.headers = {
+    'Ocp-Apim-Subscription-Key': accountKey,
+  };
+  let status = 'running';
+  let res = {};
+  while (status === 'running') {
+    await waitForNextCall();
+    res = await resRequest.loadJSON();
+    status = res.status;
   }
-  return data;
+  //   const data = res
+  if (status === 'succeeded') {
+    const {
+      analyzeResult: {
+        readResults: [{ lines }],
+      },
+    } = res;
+    const regex = /^(Out|In)/;
+    const fn = (acc, cur, idx, arr) =>
+      regex.test(cur.text)
+        ? [
+            ...acc,
+            ...[
+              toTransaction(
+                arr[idx + 1].text,
+                arr[idx + 2].text,
+                arr[idx + 3].text
+              ),
+            ],
+          ]
+        : acc;
+    const data = lines.reduce(fn, []);
+    console.log(data);
+    console.log(data.length);
+    return data;
+  }
+  return [];
 };
+
+module.exports = ocr;
