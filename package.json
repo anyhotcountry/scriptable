@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "copy": "copy .\\src\\* ..\\..\\..\\iCloudDrive\\iCloud~dk~simonbs~Scriptable\\"
+    "copy": "copy .\\src\\* ..\\..\\..\\iCloudDrive\\iCloud~dk~simonbs~Scriptable\\ & copy .\\src\\lib\\* ..\\..\\..\\iCloudDrive\\iCloud~dk~simonbs~Scriptable\\lib\\"
   },
   "repository": {
     "type": "git",
