@@ -27,6 +27,6 @@ const main = async () => {
 
   const table = tableManager(transactions, startDay).buildTable();
   await table.present(true);
-}
+};
 
 main().then(() => Script.complete());

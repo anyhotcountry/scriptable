@@ -32,7 +32,6 @@ module.exports = (storeName) => {
     data = JSON.parse(json, (key, value) =>
       key === 'date' ? new Date(value) : value
     );
-
   };
 
   const save = () => {
@@ -40,33 +39,48 @@ module.exports = (storeName) => {
   };
 
   const add = (obj) => {
-    data.push(obj);
+    data = [...data, obj];
+  };
+
+  const update = (obj, newProps) => {
+    const newObj = { ...obj, ...newProps };
+    const newData = data.filter((x) => x !== obj);
+    newData.push(newObj);
+    data = newData;
   };
 
   const remove = (obj) => {
-    const index = data.indexOf(obj);
-    data.splice(index, 1);
+    update(obj, { ignore: true });
   };
 
-  const regularWeekly = () => data.filter((d) =>
-    groceryShops.some((s) => d.description.includes(s))
-  );
+  const regularWeekly = () =>
+    data.filter(
+      (d) => !d.ignore && groceryShops.some((s) => d.description.includes(s))
+    );
 
-  const other = () => data.filter(
-    (d) => !groceryShops.some((s) => d.description.includes(s))
-  );
+  const other = () =>
+    data.filter(
+      (d) => !d.ignore && !groceryShops.some((s) => d.description.includes(s))
+    );
 
   const removeDuplicates = () => {
-    const map = new Map(data.map((x) => [JSON.stringify(x), x]));
+    const map = new Map();
+    const ignored = data.filter((x) => x.ignore);
+    for (let obj of [...data, ...ignored]) {
+      const { ignore, ...newObj } = obj;
+      map.set(JSON.stringify(newObj), obj);
+    }
     data = [...map.values()];
   };
 
-  const removeForecast = () => {
-    data = data.filter((r) => r.actual);
+  const reset = () => {
+    data = data.filter((r) => r.actual).map((r) => ({ ...r, ignore: false }));
   };
-  
+
   const sort = () => {
-    data.sort((a, b) => a.date.getTime() - b.date.getTime());
+    const newData = [...data];
+    newData.sort((a, b) => a.date.getTime() - b.date.getTime());
+    data = newData;
   };
 
   if (!files.isDirectory(stores)) {
@@ -77,5 +91,20 @@ module.exports = (storeName) => {
     save();
   }
 
-  return { get data() { return data }, load, save, add, remove, groupByWeek, regularWeekly, other, sort, removeForecast, removeDuplicates };
+  return {
+    get data() {
+      return data.filter((x) => !x.ignore);
+    },
+    load,
+    save,
+    add,
+    remove,
+    update,
+    groupByWeek,
+    regularWeekly,
+    other,
+    sort,
+    reset,
+    removeDuplicates,
+  };
 };

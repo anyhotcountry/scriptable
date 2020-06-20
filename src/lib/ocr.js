@@ -13,22 +13,28 @@ const ocr = async (imageData) => {
 
   const toTransaction = (description, rawValue, rawDate) => {
     const value = parseFloat(rawValue.replace(/[^0-9.-]+/g, ''));
-    return { description, value, date: new Date(rawDate), actual: true };
+    return {
+      description,
+      value,
+      date: new Date(rawDate),
+      actual: true,
+      ignore: false,
+    };
   };
 
   const regex = /^(Out|In)/;
   const reduceFn = (acc, cur, idx, arr) =>
     regex.test(cur.text)
       ? [
-        ...acc,
-        ...[
-          toTransaction(
-            arr[idx + 1].text,
-            arr[idx + 2].text,
-            arr[idx + 3].text
-          ),
-        ],
-      ]
+          ...acc,
+          ...[
+            toTransaction(
+              arr[idx + 1].text,
+              arr[idx + 2].text,
+              arr[idx + 3].text
+            ),
+          ],
+        ]
       : acc;
 
   try {
