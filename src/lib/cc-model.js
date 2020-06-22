@@ -2,6 +2,7 @@
 // These must be at the very top of the file. Do not edit.
 // icon-color: light-gray; icon-glyph: cogs;
 module.exports = (storeName) => {
+  const startDay = 27;
   const files = FileManager.iCloud();
   const documents = files.documentsDirectory();
   const stores = `${documents}/stores`;
@@ -11,19 +12,22 @@ module.exports = (storeName) => {
   const groceryShops = ['TESCO', 'ALDI', 'ASDA', 'WAITROSE'];
 
   const groupByWeek = (week1) => {
-    return regularWeekly().reduce((rv, x) => {
-      let v = Math.max(
-        1,
-        1 + Math.floor((x.date.getTime() - week1.getTime()) / (MS_PER_DAY * 7))
-      );
-      let el = rv.find((r) => r && r.key === v);
-      if (el) {
-        el.values.push(x);
-      } else {
-        rv.push({ key: v, values: [x] });
-      }
-      return rv;
-    }, []);
+    return regularWeekly()
+      .reduce((rv, x) => {
+        let v = Math.max(
+          1,
+          1 +
+            Math.floor((x.date.getTime() - week1.getTime()) / (MS_PER_DAY * 7))
+        );
+        let el = rv.find((r) => r && r.number === v);
+        if (el) {
+          el.values.push(x);
+        } else {
+          rv.push({ number: v, values: [x] });
+        }
+        return rv;
+      }, [])
+      .sort((a, b) => b.number - a.number);
   };
 
   const load = async () => {
@@ -53,6 +57,20 @@ module.exports = (storeName) => {
     update(obj, { ignore: true });
   };
 
+  const periodStartDate = () => {
+    const startDate =
+      data.length !== 0 ? new Date(data[data.length - 1].date) : new Date();
+    startDate.setDate(startDay);
+    return startDate;
+  };
+
+  const periodEndDate = () => {
+    const endDate = new Date(periodStartDate());
+    endDate.setDate(startDay - 1);
+    endDate.setMonth(endDate.getMonth() + 1);
+    return endDate;
+  };
+
   const regularWeekly = () =>
     data.filter(
       (d) => !d.ignore && groceryShops.some((s) => d.description.includes(s))
@@ -79,7 +97,7 @@ module.exports = (storeName) => {
 
   const sort = () => {
     const newData = [...data];
-    newData.sort((a, b) => a.date.getTime() - b.date.getTime());
+    newData.sort((a, b) => b.date.getTime() - a.date.getTime());
     data = newData;
   };
 
@@ -100,6 +118,8 @@ module.exports = (storeName) => {
     add,
     remove,
     update,
+    periodStartDate,
+    periodEndDate,
     groupByWeek,
     regularWeekly,
     other,
