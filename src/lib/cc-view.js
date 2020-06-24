@@ -37,7 +37,7 @@ module.exports = (presenter) => {
     actions.push(presenter.deleteAction);
     alert.addCancelAction('Cancel');
     actions.push((n) => null);
-    const option = await alert.presentAlert();
+    const option = await alert.presentSheet();
     await actions[option](row);
   };
 
