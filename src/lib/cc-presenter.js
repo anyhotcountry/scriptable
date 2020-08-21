@@ -68,6 +68,12 @@ module.exports = (model, startDay) => {
     updateView();
   };
 
+  const resetMonthAction = () => {
+    model.resetMonth();
+    model.save();
+    updateView();
+  };
+
   const importAction = () => {
     Photos.latestScreenshot().then(view.showImageImport, updateView);
   };
@@ -129,6 +135,7 @@ module.exports = (model, startDay) => {
     domainAction,
     onRowSelect,
     resetAction,
+    resetMonthAction,
     importAction,
     processImageAction,
     cancelAction,

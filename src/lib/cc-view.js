@@ -41,6 +41,21 @@ module.exports = (presenter) => {
     await actions[option](row);
   };
 
+  const showMainMenu = async () => {
+    const actions = [];
+    const alert = new Alert();
+    alert.addAction('Import');
+    actions.push(presenter.importAction);
+    alert.addAction('Reset');
+    actions.push(presenter.resetAction);
+    alert.addAction('Reset Month');
+    actions.push(presenter.resetMonthAction);
+    alert.addCancelAction('Cancel');
+    actions.push((n) => null);
+    const option = await alert.presentSheet();
+    actions[option]();
+  };
+
   const showImageImport = (img) => {
     table.removeAllRows();
     table.showSeparators = false;
@@ -153,14 +168,10 @@ module.exports = (presenter) => {
       `${dateFormatter.string(now)} - ${daysLeft} days left`
     );
     summary.widthWeight = 70;
-    const importButton = menu.addButton('Import');
-    importButton.rightAligned();
-    importButton.widthWeight = 15;
-    importButton.onTap = presenter.importAction;
-    const resetButton = menu.addButton('Reset');
-    resetButton.rightAligned();
-    resetButton.widthWeight = 15;
-    resetButton.onTap = presenter.resetAction;
+    const menuButton = menu.addButton('☰');
+    menuButton.rightAligned();
+    menuButton.widthWeight = 15;
+    menuButton.onTap = showMainMenu;
     table.reload();
   };
 

@@ -95,6 +95,10 @@ module.exports = (storeName) => {
     data = data.filter((r) => r.actual).map((r) => ({ ...r, ignore: false }));
   };
 
+  const resetMonth = () => {
+    data = [];
+  };
+
   const sort = () => {
     const newData = [...data];
     newData.sort((a, b) => b.date.getTime() - a.date.getTime());
@@ -125,6 +129,7 @@ module.exports = (storeName) => {
     other,
     sort,
     reset,
+    resetMonth,
     removeDuplicates,
   };
 };
