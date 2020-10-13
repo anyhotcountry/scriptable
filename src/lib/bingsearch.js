@@ -1,6 +1,7 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
-// icon-color: light-gray; icon-glyph: plug;
+// always-run-in-app: true; icon-color: deep-blue;
+// icon-glyph: credit-card;
 const accountName = Keychain.get('bing-account');
 const accountKey = Keychain.get('bing-key');
 const baseUrl = `https://${accountName}.cognitiveservices.azure.com/bing/v7.0/search?count=1&offset=0&mkt=en-gb&safesearch=Strict&responseFilter=Webpages`;
@@ -42,4 +43,4 @@ const getDomain = async (description) => {
   }
 };
 
-module.exports.getDomain = getDomain;
+export { getDomain };

@@ -1,7 +1,8 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
-// icon-color: light-gray; icon-glyph: cogs;
-module.exports = (storeName) => {
+// always-run-in-app: true; icon-color: deep-blue;
+// icon-glyph: credit-card;
+export default (storeName) => {
   const startDay = 27;
   const files = FileManager.iCloud();
   const documents = files.documentsDirectory();

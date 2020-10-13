@@ -1,10 +1,10 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
-// always-run-in-app: true; icon-color: light-gray;
-// icon-glyph: cogs;
-const clearbitlookup = importModule('clearbit');
+// always-run-in-app: true; icon-color: deep-blue;
+// icon-glyph: credit-card;
+import clearbitlookup from './clearbit';
 
-module.exports = (presenter) => {
+export default (presenter) => {
   const dateFormatter = new DateFormatter();
   dateFormatter.dateFormat = 'E d MMM';
   const rows = [];

@@ -1,7 +1,7 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
-// always-run-in-app: true; icon-color: light-gray;
-// icon-glyph: plug;
+// always-run-in-app: true; icon-color: deep-blue;
+// icon-glyph: credit-card;
 const ocr = async (imageData) => {
   const accountName = Keychain.get('ocr-account');
   const accountKey = Keychain.get('ocr-key');
@@ -75,4 +75,4 @@ const ocr = async (imageData) => {
   }
 };
 
-module.exports = ocr;
+export default ocr;

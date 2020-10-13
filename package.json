@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "rollup --no-strict --config",
     "test": "echo \"Error: no test specified\" && exit 1",
     "copy": "copy .\\src\\* ..\\..\\..\\iCloudDrive\\iCloud~dk~simonbs~Scriptable\\ & copy .\\src\\lib\\* ..\\..\\..\\iCloudDrive\\iCloud~dk~simonbs~Scriptable\\lib\\"
   },
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@scriptable-ios/eslint-config": "^1.4.0",
     "@types/scriptable-ios": "^1.4.0",
-    "eslint": "latest"
+    "eslint": "latest",
+    "rollup": "^2.29.0"
   }
 }

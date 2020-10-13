@@ -1,11 +1,11 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
-// always-run-in-app: true; icon-color: light-gray;
-// icon-glyph: cogs;
-const ocr = importModule('ocr');
-const bingsearch = importModule('bingsearch');
+// always-run-in-app: true; icon-color: deep-blue;
+// icon-glyph: credit-card;
+import ocr from './ocr';
+import { getDomain } from './bingsearch';
 
-module.exports = (model, startDay) => {
+export default (model, startDay) => {
   let view = {};
   const MS_PER_DAY = 86400000;
 
@@ -92,7 +92,7 @@ module.exports = (model, startDay) => {
     view.showMessage('Importing screenshot...');
     const fileData = await ocr(Data.fromPNG(img));
     for (const line of fileData) {
-      line.domain = await bingsearch.getDomain(line.description);
+      line.domain = await getDomain(line.description);
       model.add(line);
     }
     await Photos.removeLatestScreenshot();
