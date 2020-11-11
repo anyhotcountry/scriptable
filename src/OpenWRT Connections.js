@@ -1,9 +1,7 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
 // icon-color: cyan; icon-glyph: magic;
-const host = Keychain.get('openwrt.host');
-const baseurl = `https://${host}/cgi-bin/luci/rpc/`;
-
+const baseurl = Keychain.get('openwrt.url');
 const maxEntries = 12;
 let items = await loadItems();
 let widget = await createWidget(items);
@@ -11,15 +9,15 @@ let widget = await createWidget(items);
 // a widget. If not, show a preview of
 // the widget to easier debug it.
 if (!config.runsInWidget) {
-  await widget.presentMedium();
+ await widget.presentMedium();
 }
 // Tell the system to show the widget.
 Script.setWidget(widget);
 Script.complete();
 
 async function rpcCall(api, method, params, token) {
-  const url = `${baseurl}${api}?auth=${token}`;
-  const req = new Request(baseurl + api);
+  const url = `${baseurl}/cgi-bin/luci/rpc/${api}?auth=${token}`;
+  const req = new Request(url);
   req.method = "POST";
   const data = {
     id: 1,
@@ -61,6 +59,9 @@ async function createWidget(items) {
   gradient.colors = [new Color("#222222"), new Color("#444443")];
   w.backgroundGradient = gradient;
   const scale = 18 / items[0].total;
+  let titleTxt = w.addText(new Date().toLocaleString());
+  titleTxt.font = new Font("Menlo-Regular", 12);
+  titleTxt.textColor = Color.blue();
   for (let i = 0; i < items.length && i < maxEntries; i++) {
     const item = items[i];
     const name = item.name.padEnd(15, "·");
