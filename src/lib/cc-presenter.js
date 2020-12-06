@@ -2,7 +2,7 @@
 // These must be at the very top of the file. Do not edit.
 // always-run-in-app: true; icon-color: deep-blue;
 // icon-glyph: credit-card;
-import ocr from './ocr';
+import webscrape from './webscrape';
 import { getDomain } from './bingsearch';
 
 export default (model, startDay) => {
@@ -75,7 +75,7 @@ export default (model, startDay) => {
   };
 
   const importAction = () => {
-    Photos.latestScreenshot().then(view.showImageImport, updateView);
+    webscrapeAction().then(updateView, (e) => console.error(e));
   };
 
   const onRowSelect = async (number) => {
@@ -88,17 +88,14 @@ export default (model, startDay) => {
     return days;
   };
 
-  const processImageAction = async (img) => {
-    view.showMessage('Importing screenshot...');
-    const fileData = await ocr(Data.fromPNG(img));
+  const webscrapeAction = async () => {
+    const fileData = await webscrape();
     for (const line of fileData) {
       line.domain = await getDomain(line.description);
       model.add(line);
     }
-    await Photos.removeLatestScreenshot();
     model.removeDuplicates();
     model.save();
-    importAction();
   };
 
   const updateView = () => {
@@ -137,7 +134,6 @@ export default (model, startDay) => {
     resetAction,
     resetMonthAction,
     importAction,
-    processImageAction,
     cancelAction,
     setView,
     init,
