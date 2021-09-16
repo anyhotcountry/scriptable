@@ -56,31 +56,6 @@ export default (presenter) => {
     actions[option]();
   };
 
-  const showImageImport = (img) => {
-    table.removeAllRows();
-    table.showSeparators = false;
-    const menu = new UITableRow();
-    menu.isHeader = true;
-    table.addRow(menu);
-
-    const summary = menu.addText('Import Screenshot?');
-    summary.widthWeight = 70;
-    const importButton = menu.addButton('Import');
-    importButton.rightAligned();
-    importButton.widthWeight = 15;
-    importButton.onTap = () => presenter.processImageAction(img);
-    const cancelButton = menu.addButton('Cancel');
-    cancelButton.rightAligned();
-    cancelButton.widthWeight = 15;
-    cancelButton.onTap = presenter.cancelAction;
-
-    const imgRow = new UITableRow();
-    imgRow.addImage(img);
-    imgRow.height = Device.screenSize().height;
-    table.addRow(imgRow);
-    table.reload();
-  };
-
   const showMessage = (msg) => {
     table.removeAllRows();
     table.showSeparators = false;
@@ -183,7 +158,6 @@ export default (presenter) => {
   const view = {
     buildTable,
     showRowMenu,
-    showImageImport,
     showMessage,
     show,
     getValue,

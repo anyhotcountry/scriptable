@@ -14,7 +14,8 @@ const webscrape = async () => {
       ignore: false,
     };
   };
-
+  const pass = Keychain.get('tesco.pass');
+  Pasteboard.copy(pass);
   const url = 'https://www.tescobank.com/banking-overview/welcome';
   const wv = new WebView();
   await wv.loadURL(url);

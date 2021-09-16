@@ -89,6 +89,7 @@ export default (model, startDay) => {
   };
 
   const webscrapeAction = async () => {
+    view.showMessage('Importing...');
     const fileData = await webscrape();
     for (const line of fileData) {
       line.domain = await getDomain(line.description);
