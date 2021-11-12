@@ -90,6 +90,12 @@ async function searches() {
     await mobile(mobileSearches / 3, pcSearches / 3);
   } else if (mode === 'desktop') {
     await desktop();
+  } else if (mode === 'login') {
+    const wv = new WebView();
+    const url = 'https://account.microsoft.com/rewards/';
+    await wv.loadURL(url);
+    await wv.present();
+    next('mobile');
   } else {
     const data = await getData();
     const widget = await createWidget(data);
@@ -132,30 +138,41 @@ async function searches() {
     const url = `https://www.bing.com/search?q=${word1}+${word2}`;
     return url;
   }
+}
 
-  function next(mode, count = 0) {
-    const scriptUrl = `${URLScheme.forRunningScript()}?mode=${mode}&count=${count}`;
-    console.log(scriptUrl);
-    Safari.open(scriptUrl);
-  }
+function next(mode, count = 0) {
+  const scriptUrl = `${URLScheme.forRunningScript()}?mode=${mode}&count=${count}`;
+  console.log(scriptUrl);
+  Safari.open(scriptUrl);
 }
 
 async function getData() {
-  let lastUpdated = new Date();
-  const wv = new WebView();
-  const url = 'https://account.microsoft.com/rewards/';
-  await wv.loadURL(url);
-  await wait(5000);
-  let data = await wv.evaluateJavaScript(
-    '(typeof dashboard == "object") ? dashboard : {};'
-  );
   const fm = FileManager.iCloud();
+  let lastUpdated = new Date();
+  let data = null;
   const filePath = fm.joinPath(fm.documentsDirectory(), 'dashboard.json');
-  if (!data.userStatus && fm.fileExists(filePath)) {
+  if (config.runsInWidget) {
     await fm.downloadFileFromiCloud(filePath);
     lastUpdated = fm.modificationDate(filePath);
     data = JSON.parse(fm.readString(filePath));
   } else {
+    const wv = new WebView();
+    const url = 'https://account.microsoft.com/rewards/';
+    await wv.loadURL(url);
+    const start = new Date().getTime();
+    let elapsed = 0;
+    while (data === null && elapsed < 5000) {
+      await wait(500);
+      data = await wv.evaluateJavaScript(
+        '(typeof dashboard == "object") ? dashboard : null;'
+      );
+      elapsed = new Date().getTime() - start;
+    }
+
+    if (data === null) {
+      next('login');
+      return {};
+    }
     fm.writeString(filePath, JSON.stringify(data));
   }
   const today = new Date().toLocaleDateString('en-US', {
@@ -163,8 +180,6 @@ async function getData() {
     day: '2-digit',
     year: 'numeric',
   });
-  console.log(today);
-
   let total = 0,
     streak = 0,
     pcProgress = 0,
@@ -197,7 +212,7 @@ async function getData() {
   } catch (e) {
     console.log(e);
   }
-  let [dailyProgress, dailyProgressMax] = daily.reduce(
+  let [dailyProgress, dailyProgressMax] = (daily ?? []).reduce(
     (a, b) => [a[0] + b.pointProgress, a[1] + b.pointProgressMax],
     [0, 0]
   );
