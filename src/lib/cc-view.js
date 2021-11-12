@@ -2,7 +2,6 @@
 // These must be at the very top of the file. Do not edit.
 // always-run-in-app: true; icon-color: deep-blue;
 // icon-glyph: credit-card;
-import clearbitlookup from './clearbit';
 
 export default (presenter) => {
   const dateFormatter = new DateFormatter();
@@ -72,7 +71,7 @@ export default (presenter) => {
   const buildRow = (c1, c2 = '', c3 = '', obj = {}, domain = '') => {
     const row = new UITableRow();
     if (domain !== '') {
-      const logo = row.addImageAtURL(clearbitlookup(domain));
+      const logo = row.addImage(SFSymbol.named(`${domain}.square.fill`).image);
       logo.widthWeight = 10;
     }
     const descCell = row.addText(c1, c2);

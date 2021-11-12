@@ -10,7 +10,7 @@ export default (storeName) => {
   const store = `${stores}/${storeName}.json`;
   let data = [];
   const MS_PER_DAY = 86400000;
-  const groceryShops = ['TESCO', 'ALDI', 'ASDA', 'WAITROSE'];
+  const groceryShops = ['TESCO', 'ALDI', 'ASDA', 'WAITROSE','COSTA', 'KFC', 'DOMINOS', 'SAINSBURYS', 'HAPPY VALLEY'];
 
   const groupByWeek = (week1) => {
     return regularWeekly()

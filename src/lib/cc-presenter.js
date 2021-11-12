@@ -3,7 +3,6 @@
 // always-run-in-app: true; icon-color: deep-blue;
 // icon-glyph: credit-card;
 import webscrape from './webscrape';
-import { getDomain } from './bingsearch';
 
 export default (model, startDay) => {
   let view = {};
@@ -92,7 +91,7 @@ export default (model, startDay) => {
     view.showMessage('Importing...');
     const fileData = await webscrape();
     for (const line of fileData) {
-      line.domain = await getDomain(line.description);
+      line.domain = line.description[0].toLowerCase();
       model.add(line);
     }
     model.removeDuplicates();
