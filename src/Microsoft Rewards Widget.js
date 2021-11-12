@@ -93,7 +93,7 @@ async function searches() {
   } else if (mode === 'login') {
     const wv = new WebView();
     const url = 'https://account.microsoft.com/rewards/';
-    await wv.loadURL(url);
+    wv.loadURL(url);
     await wv.present();
     next('mobile');
   } else {
@@ -112,7 +112,6 @@ async function searches() {
       if (i === 0) {
         wv.loadURL(url);
         await wv.present();
-        wv.present();
       }
       await Promise.any([wv.loadURL(url), wait(2000)]);
     }
@@ -157,10 +156,12 @@ async function getData() {
     data = JSON.parse(fm.readString(filePath));
   } else {
     const wv = new WebView();
+    let start = new Date().getTime();
     const url = 'https://account.microsoft.com/rewards/';
-    await wv.loadURL(url);
-    const start = new Date().getTime();
-    let elapsed = 0;
+    wv.loadURL(url);
+    let elapsed = new Date().getTime() - start;
+    start = new Date().getTime();
+    elapsed = 0;
     while (data === null && elapsed < 5000) {
       await wait(500);
       data = await wv.evaluateJavaScript(
