@@ -75,6 +75,7 @@ function createWidget(data) {
 }
 
 async function searches() {
+  console.log('searches()');
   const req = new Request(
     'https://gist.githubusercontent.com/deekayen/4148741/raw/98d35708fa344717d8eee15d11987de6c8e26d7d/1-1000.txt'
   );
@@ -98,7 +99,7 @@ async function searches() {
     next('mobile');
   } else {
     const data = await getData();
-    const widget = await createWidget(data);
+    const widget = createWidget(data);
     widget.presentSmall();
     Safari.open(
       'microsoft-edge-https://account.microsoft.com/rewards/dashboard?refd=www.bing.com'
@@ -146,6 +147,7 @@ function next(mode, count = 0) {
 }
 
 async function getData() {
+  console.log('getData()');
   const fm = FileManager.iCloud();
   let lastUpdated = new Date();
   let data = null;
@@ -160,6 +162,7 @@ async function getData() {
     const url = 'https://account.microsoft.com/rewards/';
     wv.loadURL(url);
     let elapsed = new Date().getTime() - start;
+    console.log(`Loading WebView took ${elapsed}`);
     start = new Date().getTime();
     elapsed = 0;
     while (data === null && elapsed < 5000) {
@@ -168,6 +171,7 @@ async function getData() {
         '(typeof dashboard == "object") ? dashboard : null;'
       );
       elapsed = new Date().getTime() - start;
+      console.log(elapsed);
     }
 
     if (data === null) {

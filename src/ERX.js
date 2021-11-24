@@ -2,11 +2,11 @@
 // These must be at the very top of the file. Do not edit.
 // icon-color: cyan; icon-glyph: magic;
 // You need entries in Keychain for your router url and password
-// This can be done by creating a new script with these lines:// 
-const baseurl = Keychain.get('openwrt.url');
-const passwd = Keychain.get('openwrt.pass');
+// This can be done by creating a new script with these lines:
 
 // Customise settings
+const apiKey = Keychain.get('erx.api.key');
+const url = Keychain.get('erx.url');
 const iface = 'eth0';
 const loadHigh = 2; // Load will depend on your CPU cores
 const flashHigh = 75; // percent
@@ -18,9 +18,7 @@ const pingName = 'WireGuard'
 // ===========================
 
 let data = {};
-let token = null;
 try {
-  token = await rpcCall('auth', 'login', ['root', passwd]);
   data = await getData();
   console.log(data);
 } catch (e) {
@@ -50,9 +48,9 @@ function createWidget(data) {
   wdate.rightAlignText();
   wdate.applyOffsetStyle();
   wdate.font = Font.systemFont(8);
-  const header = addText(widget, 'OpenWRT');
+  const header = addText(widget, 'ERX');
   header.font = Font.boldSystemFont(14);
-  if (token === null) {
+  if (data === null) {
     const nodata = addText(widget, 'NO DATA');
     nodata.font = Font.boldSystemFont(16);
     nodata.textColor = Color.red();
@@ -67,18 +65,16 @@ function createWidget(data) {
     stack1,
     'LOAD',
     data.load.join('/'),
-    data.load[2],
+    `${data.load[2]}`,
     Color.orange(),
-    parseFloat(data.load[2]) >= loadHigh
+    data.load[2] >= loadHigh
   );
   stack1.addSpacer(2);
-  const bytes = data.received - data.prevReceived;
-  const seconds = 1e-3 * (data.timestamp - data.prevTimestamp);
   addStat(
     stack1,
     'NET',
-    `↑${Math.round(1e-9 * data.transmitted)} ↓${Math.round(1e-9 * data.received)} GB`,
-    data.prevTimestamp ? `↓${formatBytes(bytes / seconds, 0)}B/s` :  'N/A',
+    `↑${data.tx}`,
+    `↓${data.rx}`,
     Color.cyan()
   );
   widget.addSpacer(4);
@@ -88,7 +84,7 @@ function createWidget(data) {
   addStat(
     stack2,
     'MEM',
-    `${data.used}/${data.total} MB`,
+    `${data.memUsed}/${data.memTotal} MB`,
     `${data.percent}%`,
     Color.magenta(),
     data.percent >= memHigh
@@ -113,7 +109,6 @@ function createWidget(data) {
   addText(stack4, ` IP: ${data.ip}`, Color.yellow());
   const pingStatus = data.pingTest ? '⬤' : '⭘';
   addText(stack5, `${pingName}: ${pingStatus}`, data.pingTest ? Color.green() : Color.red());
-  addText(stack5, `AdBlock: ${formatBytes(data.adblock, 0)}`, data.adblock > 0 ? Color.green() : Color.red());
   return widget;
 }
 
@@ -158,7 +153,7 @@ function addStat(container, label, footnote, value, color, isHigh) {
   }
   if (value) {
     const wvalue = stack.addText(value);
-    wvalue.font = Font.mediumSystemFont(12);
+    wvalue.font = Font.mediumSystemFont(10);
     wvalue.textColor = isHigh ? Color.red() : Color.green();
     wvalue.centerAlignText();
   }
@@ -178,109 +173,27 @@ function formatBytes(bytes, decimals = 2) {
 
 
 async function getData() {
-  const cache = cacheManager();
-  const prevData = cache.load();
-  const uptime = await rpcCall('sys', 'uptime', [], token);
-  const meminfoRaw = await rpcCall('sys', 'exec', ['cat /proc/meminfo'], token);
-  const loadRaw = await rpcCall('sys', 'exec', ['cat /proc/loadavg'], token);
-  const flashRaw = await rpcCall('sys', 'exec', ['df | grep overlayfs'], token);
-  const trafficRaw = await rpcCall(
-    'sys',
-    'exec',
-    [`grep 'total bytes' /proc/${iface}`],
-    token
-  );
-  const timestamp = new Date().getTime();
-  const ipStr = await rpcCall(
-    'sys',
-    'exec',
-    [`ip -j -4 address show ${iface}`],
-    token
-  );
-  let pingTest = null;
-  if (pingHost) {
-    pingTest = await rpcCall("sys", "exec", [`ping -c 1 -W 1 ${pingHost} &> /dev/null; echo -n $?`], token);
-  }
-  const adblockRaw = await rpcCall('sys', 'exec', ['/etc/init.d/adblock status_service | grep blocked_domains'], token);
-  const [, flashTotalStr, flashUsedStr] = flashRaw.split(/ +/, 3);
-  const trafficRegex = /received +(\d+).*transmitted +(\d+)/s;
-  const [, receivedStr, transmittedStr] = trafficRegex.exec(trafficRaw) || [];
-  const load = loadRaw.split(' ', 3);
-  const meminfo = parseMeminfo(meminfoRaw);
-  const flashTotal = parseInt(flashTotalStr);
-  const flashUsed = parseInt(flashUsedStr);
-  const received = parseInt(receivedStr);
-  const transmitted = parseInt(transmittedStr);
-  const [
-    {
-      addr_info: [{ local: ip }],
-    },
-  ] = JSON.parse(ipStr);
-  const [, adblock] = adblockRaw.split(':');
-  const other = {
-    timestamp,
-    uptime: parseInt(uptime),
-    load,
-    ip,
-    pingTest: pingTest === '0',
-    adblock: parseInt(adblock),
-    flashTotal: Math.round(flashTotal / 1000),
-    flashUsed: Math.round(flashUsed / 1000),
-    flashPercent: Math.round((100 * flashUsed) / flashTotal),
-    received,
-    transmitted,
-    prevTransmitted: prevData.received,
-    prevReceived: prevData.received,
-    prevTimestamp: prevData.timestamp,
-  };
-  const data = { ...meminfo, ...other };
-  cache.save(data);
-  return data;
-}
-
-async function rpcCall(api, method, params, token) {
-  const url = `${baseurl}/contrast-identity/${api}?auth=${token}`;
   const req = new Request(url);
-  req.method = 'POST';
-  const data = {
-    id: 1,
-    method,
-    params,
-  };
-  req.body = JSON.stringify(data);
-//    console.log(req);
+  req.headers = {'X-API-KEY': apiKey};
+  req.method = 'GET';
   const res = await req.loadJSON();
-//   console.log(res);
-  return res.result;
-}
-
-function cacheManager() {
-  const fm = FileManager.local();
-  const filePath = fm.joinPath(fm.documentsDirectory(), 'openwrt.json');
+  console.log(res);
   
-  function load() {
-    return fm.fileExists(filePath) ? JSON.parse(fm.readString(filePath)) : {};
-  }
-
-  function save(data) {
-    fm.writeString(filePath, JSON.stringify(data));
-  }
-  
-  return { load, save };
-}
-
-function parseMeminfo(raw) {
-  const lines = raw.split(/\n/);
-  const obj = {};
-  for (let line of lines) {
-    const [rawProp, rawVal] = line.split(':');
-    obj[rawProp] = parseInt(rawVal);
-  }
-  const cleanObj = {
-    total: Math.round(obj.MemTotal / 1000),
-    used: Math.round((obj.MemTotal - obj.MemAvailable) / 1000),
-    percent: Math.round(100 * (1.0 - obj.MemAvailable / obj.MemTotal)),
+  const obj = {
+    uptime: res.uptime[0],
+    load: res.load,
+    ip: res.ip,
+    pingTest: res.ping,
+    adblock: 0,
+    flashTotal: Math.round(res.fs[0] / 1024),
+    flashUsed: Math.round(res.fs[1] / 1024),
+    flashPercent: Math.round((100 * res.fs[1]) / res.fs[0]),
+    rx: res.vnstat[0],
+    tx: res.vnstat[1],
+    memTotal: Math.round(res.mem[0] / 1024),
+    memUsed: Math.round((res.mem[0] - res.mem[1]) / 1024),
+    percent: 100 - Math.round((100 * res.mem[1]) / res.mem[0])
   };
-
-  return cleanObj;
+  return obj;
 }
+

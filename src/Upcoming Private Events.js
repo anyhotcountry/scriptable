@@ -1,7 +1,8 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
 // icon-color: blue; icon-glyph: calendar;
-const maxEntries = 12;
+const maxEntries = 10;
+const excludeRegex = /placeholder/i;
 let items = await loadItems();
 let widget = await createWidget(items);
 // Check if the script is running in
@@ -22,7 +23,7 @@ async function createWidget(items) {
   const groups = groupBy(items);
   let gradient = new LinearGradient();
   gradient.locations = [0, 1];
-  gradient.colors = [new Color("#111111"), new Color("#000066")];
+  gradient.colors = [new Color("#111111"), new Color("#660000")];
   w.backgroundGradient = gradient;
   let count = 0;
   for (let day of Object.keys(groups)) {
@@ -38,18 +39,13 @@ async function createWidget(items) {
     for (let meeting of groups[day]) {
       if (count < maxEntries) {
         titleTxt = w.addText(
-          `${dateFormatter.string(meeting.localStart)}-${dateFormatter.string(
+          `   ${dateFormatter.string(meeting.localStart)}-${dateFormatter.string(
             meeting.localEnd
           )} ${meeting.subject}`
         );
         titleTxt.font = font;
-        const colour =
-          meeting.seriesMasterId != null ? Color.white() : Color.magenta();
+        const colour = Color.red();
         titleTxt.textColor = colour;
-        titleTxt.shadowColor = Color.black();
-titleTxt.shadowOffset = new Point(1,1);
-titleTxt.shadowRadius = 1;
-        console.log(meeting);
       }
       count++;
     }
@@ -66,7 +62,7 @@ function groupBy(xs) {
 }
 
 async function loadItems() {
-  let url = Keychain.get('events.url');
+  let url = Keychain.get('privateevents.url');
   let req = new Request(url);
   let json = await req.loadJSON();
   console.log(json);
@@ -88,5 +84,5 @@ async function loadItems() {
     localStart: new Date(x.start + "Z"),
     localEnd: new Date(x.end + "Z"),
     ...x,
-  }));
+  })).filter((x) => !excludeRegex.test(x.subject));
 }
